@@ -6,6 +6,7 @@
 #include <chrono>
 #include <algorithm>
 #include <filesystem>
+#include <csignal> // for kill()
 
 using namespace std;
 
@@ -134,6 +135,17 @@ void SystemMonitor::display() {
              << p.cpuUsage << '\t'
              << p.memUsage << '\t'
              << p.name << '\n';
+    }
+}
+
+bool SystemMonitor::killProcess(int pid){
+    if(kill(pid, SIGTERM) == 0) {
+        cout << "process " << pid << " terminated successfully.\n";
+        return true;
+    }
+    else{
+        perror("Error terminating the process");
+        return false;
     }
 }
 

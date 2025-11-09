@@ -21,6 +21,7 @@ public:
     double getMemoryUsage(double &usedMem, double &totalMem); // Fetch memory usage
     vector<ProcessInfo> getProcesses();  // Reads process list
     void display();     // Display formatted output
+    bool killProcess(int pid);  // kills the process corresponding with PID entered
 };
 
 #endif
