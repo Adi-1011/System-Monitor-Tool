@@ -4,6 +4,8 @@
 #include <sstream>
 #include <thread>
 #include <chrono>
+#include <algorithm>
+#include <filesystem>
 
 using namespace std;
 
@@ -44,6 +46,46 @@ double SystemMonitor::getMemoryUsage(double &usedMem, double &totalMem) {
     return (usedMem / totalMem) * 100.0;
 }
 
+#include <filesystem>
+using namespace std;
+
+// ---------- PROCESS LIST ----------
+vector<ProcessInfo> SystemMonitor::getProcesses() {
+    vector<ProcessInfo> processes;
+
+    for (const auto &entry : filesystem::directory_iterator("/proc")) {
+        if (!entry.is_directory()) continue;
+        string dir = entry.path().filename();
+        if (!all_of(dir.begin(), dir.end(), ::isdigit)) continue;  // only numeric dirs
+
+        ProcessInfo p{};
+        p.pid = stoi(dir);
+
+        // --- Read /proc/[pid]/stat ---
+        ifstream statFile("/proc/" + dir + "/stat");
+        if (!statFile) continue;
+        string comm;
+        statFile >> p.pid >> comm >> p.state;
+        p.name = comm.substr(1, comm.size() - 2);  // remove parentheses
+
+        // --- Read /proc/[pid]/status for memory ---
+        ifstream statusFile("/proc/" + dir + "/status");
+        string key;
+        long mem = 0;
+        while (statusFile >> key) {
+            if (key == "VmRSS:") {
+                statusFile >> mem;
+                p.memUsage = mem / 1024.0;  // kB→MB
+                break;
+            }
+        }
+
+        processes.push_back(p);
+    }
+    return processes;
+}
+
+
 //  DISPLAY 
 void SystemMonitor::display() {
     double used = 0, total = 0;
@@ -51,8 +93,14 @@ void SystemMonitor::display() {
     double mem = getMemoryUsage(used, total);
 
     cout << "---------------------------------------------\n";
-    cout << " CPU Usage: " << cpu << "%\n";
-    cout << " Memory Usage: " << used << " MB / " << total << " MB ("
-         << mem << "%)\n";
+    cout << " CPU Usage: " << cpu << "% | Memory: " << used << " MB / "
+         << total << " MB (" << mem << "%)\n";
     cout << "---------------------------------------------\n";
+    cout << "PID\tSTATE\tMEM(MB)\tNAME\n";
+
+    for (auto &p : getProcesses()) {
+        cout << p.pid << '\t' << p.state << '\t'
+             << p.memUsage << '\t' << p.name << '\n';
+    }
 }
+
