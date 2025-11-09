@@ -11,6 +11,7 @@ struct ProcessInfo
     string name;
     char state;
     double memUsage;
+    double cpuUsage;
 };
 
 
